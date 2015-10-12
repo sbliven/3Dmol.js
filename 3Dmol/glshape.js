@@ -920,16 +920,18 @@ $3Dmol.GLShape = (function() {
             }
             // Vector normal to the torus
             var torusNormal = function(major,minor,phi,theta) {
-                var norm = new $3Dmol.Vector3( Math.sin(phi),
-                    Math.cos(phi),
-                    0 );
-                return norm;
-            }
-            var torusTangent = function(major,minor,phi,theta) {
                 var norm = new $3Dmol.Vector3( minor*Math.cos(theta)*Math.cos(phi),
                     minor*Math.cos(theta)*Math.sin(phi),
                     minor*Math.sin(theta) );
                 return norm.normalize();
+
+            }
+            // Tangent vector to the circle at the center of the torus
+            var torusTangent = function(major,minor,phi) {
+                var norm = new $3Dmol.Vector3( -Math.sin(phi),
+                    Math.cos(phi),
+                    0 );
+                return norm;
             }
             // Construct Matrix4 from center, normal, and a vector
             var extractOrientation = function(center, normal, axis) {
@@ -945,7 +947,7 @@ $3Dmol.GLShape = (function() {
                 }
                 
                 //Construct orthonormal basis using the normal and axis
-                var mat = $3Dmol.Matrix4();
+                var mat = new $3Dmol.Matrix4();
                 mat.setPosition(center);
                 return mat; //TODO stub
             }
@@ -955,6 +957,11 @@ $3Dmol.GLShape = (function() {
             var minor = torusSpec.minorradius;
             var startPhi = torusSpec.startangle || 0;
             var endPhi = torusSpec.endangle || 2*Math.PI;
+            if( startPhi > endPhi ) {
+                var swp = endPhi;
+                endPhi = startPhi;
+                startPhi = swp;
+            }     
             
             // Extract orientation
             var orientation = extractOrientation(torusSpec.center,
@@ -962,6 +969,9 @@ $3Dmol.GLShape = (function() {
                     torusSpec.startaxis)
                 || torusSpec.orientation
                 || new $3Dmol.Matrix4();
+            // Remove translational component
+            var rotation = orientation.clone();
+            rotation.setPosition(new $3Dmol.Vector3());
             
             // Define resolution, in steps per turn
             var phiSteps = 32;
@@ -972,8 +982,8 @@ $3Dmol.GLShape = (function() {
             // complete if the range is nearly 2PI
             var complete = Math.abs(2*Math.PI-endPhi+startPhi) < phiStep/2;
             
-            var startCap = true;
-            var endCap = true;
+            var startCap = torusSpec.startcap || torusSpec.startcap === undefined;
+            var endCap =  torusSpec.endcap || torusSpec.startcap === undefined;
 
             var vertices = [];
             var normals = [];
@@ -983,7 +993,7 @@ $3Dmol.GLShape = (function() {
             for(var phi = startPhi; phi < endPhi-phiStep/2; phi+=phiStep ) {
                 for( var theta = 0; theta < 2*Math.PI-thetaStep/2; theta+=thetaStep ) {
                     vertices.push( torusPos(major,minor,phi,theta).applyMatrix4(orientation) );
-                    normals.push( torusNormal(major,minor,phi,theta).applyMatrix4(orientation) );
+                    normals.push( torusNormal(major,minor,phi,theta).applyMatrix4(rotation) );
                 }
             }
             
@@ -991,7 +1001,7 @@ $3Dmol.GLShape = (function() {
             if( ! complete ) {
                 for( var theta = 0; theta < 2*Math.PI-thetaStep/2; theta+=thetaStep ) {
                     vertices.push( torusPos(major,minor,endPhi,theta).applyMatrix4(orientation) );
-                    normals.push( torusNormal(major,minor,endPhi,theta).applyMatrix4(orientation) );
+                    normals.push( torusNormal(major,minor,endPhi,theta).applyMatrix4(rotation) );
                 }
             }
             
@@ -1026,23 +1036,40 @@ $3Dmol.GLShape = (function() {
                     faces.push( nextRib );
                 }
             } else {
-                if( startCap ) {
-                    for( var rib = 0; rib < thetaSteps-1; rib++ ) {
-                        // from with start, rib, rib+1
-                        faces.push( 0);
-                        faces.push( rib );
-                        faces.push( rib+1 );
-                    }
-                }
                 if( endCap ) {
-                    var last = vertices.length-1
-                    for( var rib = 0; rib < thetaSteps-1; rib++ ) {
+                    var offset = vertices.length; //points after last ring of vertices
+                    var capNorm = torusTangent(major,minor,endPhi).applyMatrix4(rotation);
+                    for( var rib = 0; rib < thetaSteps; rib++ ) {
+                        vertices.push( vertices[offset+rib-thetaSteps] );
+                        normals.push( capNorm );
+
                         // from with start, rib, rib+1
-                        faces.push( last);
-                        faces.push( last-rib );
-                        faces.push( last-rib-1 );
+                        faces.push( offset);
+                        faces.push( offset+rib+1 );
+                        faces.push( offset+rib );
                     }
+                    vertices.push( vertices[offset-rib] );
+                    normals.push( capNorm );
+
                 }
+
+                // generate caps for open ends
+                if( startCap ) {
+                    var offset = vertices.length;
+                    var capNorm = torusTangent(major,minor,startPhi).applyMatrix4(rotation);
+                    capNorm.negate();
+                    for( var rib = 0; rib < thetaSteps-1; rib++ ) {
+                        vertices.push( vertices[rib] );
+                        normals.push( capNorm );
+                        // from with start, rib, rib+1
+                        faces.push( offset);
+                        faces.push( offset+rib );
+                        faces.push( offset+rib+1 );
+                    }
+                    vertices.push( vertices[rib] );
+                    normals.push( capNorm );
+                }
+
             }
 
             // load using custom object            

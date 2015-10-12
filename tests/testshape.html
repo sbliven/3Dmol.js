@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html style="height:100%; padding: 0; margin: 0">
     <head>
+        <meta charset='utf-8'>
         <title>$3Dmol Test</title>
         <script src="../build/3Dmol.js"></script>
         <script src="../js/jquery-1.11.1.min.js"></script>
@@ -14,7 +15,7 @@
         var modelgroup = null;
         var molObj = null; //Object3D for each rendered model      
         var voldata = null;
-        var sphere, arrow;
+        var sphere, arrow, torus;
         
         var shapecallback = function(shape, viewer) {
             if(shape.clickLabel === undefined || !shape.clickLabel instanceof $3Dmol.Label) { 
@@ -81,7 +82,16 @@
 	                	var end = start+0.5;
 	                	lin.addLine({start: {x: 0, y: start, z:0}, end: {x:0,y:end,z:0}});
 	                }
-	                                                                                                          
+	                        
+ 	                torus = glviewer.addTorus({center:posLobe.boundingSphere.center,
+ 	                    majorradius:5, minorradius:.5,
+ 	                    startangle:Math.PI*3/2,endangle:Math.PI/2,
+// 	                    startcap:false,endcap:true,
+ 	                    color:"orange"} );
+ 	                torus = glviewer.addTorus({center:new $3Dmol.Vector3(-5,0,0),
+ 	                    normal:new $3Dmol.Vector3(0,1,0),
+ 	                    majorradius:1, minorradius:.2,color:"red"} );
+	                
 	                glviewer.zoomTo();
 	                glviewer.render();    
                               
