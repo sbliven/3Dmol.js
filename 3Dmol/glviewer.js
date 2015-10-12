@@ -1338,6 +1338,22 @@ $3Dmol.GLViewer = (function() {
         };
         
         /**
+         * Creates a torus
+         * @function $3Dmol.GLShape#addTorus
+         * @param {TorusSpec} torusSpec
+         * @return {$3Dmol.GLShape}
+         */
+        this.addTorus = function(spec) {
+            spec = spec || {};
+            var s = new $3Dmol.GLShape(spec);
+            s.shapePosition = shapes.length;
+            s.addTorus(spec);
+            shapes.push(s);
+
+            return s;
+        }
+        
+        /**
          * Construct isosurface from volumetric data
          * @function $3Dmol.GLViewer#addIsosurface
          * @param {$3Dmol.VolumeData} data - volumetric data

@@ -898,6 +898,164 @@ $3Dmol.GLShape = (function() {
             var data = new $3Dmol.VolumeData(data, fmt);
             this.addIsosurface(data, volSpec);
         };
+        
+        /**
+         * Creates a torus
+         * @function $3Dmol.GLShape#addTorus
+         * @param {TorusSpec} torusSpec
+         * @return {$3Dmol.GLShape}
+         */
+        this.addTorus = function(torusSpec) {
+            /* Calculate a point on a torus in standard position
+             * @param {number} phi - toroidal angle (along the length of the torus)
+             * @parma {number} theta - poloidal angle (across the torus)
+             * @return {$3Dmol.Vector3}
+             */
+            var torusPos = function(major,minor,phi,theta) {
+                var c = major + minor*Math.cos(theta);
+                
+                return new $3Dmol.Vector3( c*Math.cos(phi),
+                    c*Math.sin(phi),
+                    minor*Math.sin(theta) );
+            }
+            // Vector normal to the torus
+            var torusNormal = function(major,minor,phi,theta) {
+                var norm = new $3Dmol.Vector3( Math.sin(phi),
+                    Math.cos(phi),
+                    0 );
+                return norm;
+            }
+            var torusTangent = function(major,minor,phi,theta) {
+                var norm = new $3Dmol.Vector3( minor*Math.cos(theta)*Math.cos(phi),
+                    minor*Math.cos(theta)*Math.sin(phi),
+                    minor*Math.sin(theta) );
+                return norm.normalize();
+            }
+            // Construct Matrix4 from center, normal, and a vector
+            var extractOrientation = function(center, normal, axis) {
+                if( !center || !normal)
+                    return undefined;
+                normal.normalize();
+                // Default axis to X (or Y if normal is X)
+                if( ! axis ) {
+                    axis = new $3Dmol.Vector3(1,0,0);
+                    // If the normal points generally towards x
+                    if( Math.abs(axis.dot(normal)) > 1/Math.sqrt(2) )
+                        axis = new $3Dmol.Vector3(0,1,0);
+                }
+                
+                //Construct orthonormal basis using the normal and axis
+                var mat = $3Dmol.Matrix4();
+                mat.setPosition(center);
+                return mat; //TODO stub
+            }
+            
+            // Extract torus parameters
+            var major = torusSpec.majorradius;
+            var minor = torusSpec.minorradius;
+            var startPhi = torusSpec.startangle || 0;
+            var endPhi = torusSpec.endangle || 2*Math.PI;
+            
+            // Extract orientation
+            var orientation = extractOrientation(torusSpec.center,
+                    torusSpec.normal,
+                    torusSpec.startaxis)
+                || torusSpec.orientation
+                || new $3Dmol.Matrix4();
+            
+            // Define resolution, in steps per turn
+            var phiSteps = 32;
+            var thetaSteps = 32;
+            var phiStep = 2*Math.PI/phiSteps;
+            var thetaStep = 2*Math.PI/thetaSteps;
+            
+            // complete if the range is nearly 2PI
+            var complete = Math.abs(2*Math.PI-endPhi+startPhi) < phiStep/2;
+            
+            var startCap = true;
+            var endCap = true;
+
+            var vertices = [];
+            var normals = [];
+            var faces = [];
+            
+            // Calculate vertices and normals
+            for(var phi = startPhi; phi < endPhi-phiStep/2; phi+=phiStep ) {
+                for( var theta = 0; theta < 2*Math.PI-thetaStep/2; theta+=thetaStep ) {
+                    vertices.push( torusPos(major,minor,phi,theta).applyMatrix4(orientation) );
+                    normals.push( torusNormal(major,minor,phi,theta).applyMatrix4(orientation) );
+                }
+            }
+            
+            // If not complete, add end ring
+            if( ! complete ) {
+                for( var theta = 0; theta < 2*Math.PI-thetaStep/2; theta+=thetaStep ) {
+                    vertices.push( torusPos(major,minor,endPhi,theta).applyMatrix4(orientation) );
+                    normals.push( torusNormal(major,minor,endPhi,theta).applyMatrix4(orientation) );
+                }
+            }
+            
+            // Add faces between each ring around the torus            
+            for( var ring = 0; ring < vertices.length-phiSteps; ring += phiSteps ) {
+                for( var rib = 0; rib < thetaSteps; rib++ ) {
+                    var nextRib = (rib+1)%thetaSteps;
+                    // face with (ring,rib), (ring,rib+1), and (ring+1,rib+1)
+                    faces.push( ring + rib);
+                    faces.push( ring+phiSteps + nextRib );
+                    faces.push( ring + nextRib );
+                    
+                    // face with (ring,rib), (ring+1,rib+1), (ring+1,rib)
+                    faces.push( ring + rib);
+                    faces.push( ring+phiSteps + rib );
+                    faces.push( ring+phiSteps + nextRib );
+                }
+            }
+            
+            if( complete ) {
+                // close ring
+                for( var rib = 0; rib < thetaSteps; rib++ ) {
+                    var nextRib = (rib+1)%thetaSteps;
+                    // face with (ring,rib), (ring,rib+1), and (ring+1,rib+1)
+                    faces.push( ring + rib);
+                    faces.push( nextRib );
+                    faces.push( ring + nextRib );
+                    
+                    // face with (ring,rib), (ring+1,rib+1), (ring+1,rib)
+                    faces.push( ring + rib);
+                    faces.push( rib );
+                    faces.push( nextRib );
+                }
+            } else {
+                if( startCap ) {
+                    for( var rib = 0; rib < thetaSteps-1; rib++ ) {
+                        // from with start, rib, rib+1
+                        faces.push( 0);
+                        faces.push( rib );
+                        faces.push( rib+1 );
+                    }
+                }
+                if( endCap ) {
+                    var last = vertices.length-1
+                    for( var rib = 0; rib < thetaSteps-1; rib++ ) {
+                        // from with start, rib, rib+1
+                        faces.push( last);
+                        faces.push( last-rib );
+                        faces.push( last-rib-1 );
+                    }
+                }
+            }
+
+            // load using custom object            
+            torusSpec.vertexArr = vertices;
+            torusSpec.normalArr = normals;
+            torusSpec.faceArr = faces;
+//              torusSpec.faceArr = faces.slice(0,16*8*3-1);
+            
+            this.addCustom(torusSpec);
+//             for(var i=0;i<vertices.length;i++)
+//                 this.addSphere({center:vertices[i],color:"red",radius:.5});
+                
+        };
 
         /**
          * Initialize webgl objects for rendering
