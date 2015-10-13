@@ -955,14 +955,32 @@ $3Dmol.GLShape = (function() {
             // Extract torus parameters
             var major = torusSpec.majorradius;
             var minor = torusSpec.minorradius;
+            
+            var startCap = torusSpec.startcap || torusSpec.startcap === undefined;
+            var endCap =  torusSpec.endcap || torusSpec.startcap === undefined;
+
             var startPhi = torusSpec.startangle || 0;
             var endPhi = torusSpec.endangle || 2*Math.PI;
+
             if( startPhi > endPhi ) {
                 var swp = endPhi;
                 endPhi = startPhi;
                 startPhi = swp;
+                swp = startCap;
+                startCap = endCap;
+                endCap = swp;
             }     
             
+            // Define resolution, in steps per turn
+            var phiSteps = torusSpec.phisteps || 32;
+            var thetaSteps = torusSpec.phisteps || 32;
+            var phiStep = 2*Math.PI/phiSteps;
+            var thetaStep = 2*Math.PI/thetaSteps;
+            
+            // complete if the range is nearly 2PI
+            var complete = Math.abs(2*Math.PI-endPhi+startPhi) < phiStep/2;
+            
+
             // Extract orientation
             var orientation = extractOrientation(torusSpec.center,
                     torusSpec.normal,
@@ -972,18 +990,7 @@ $3Dmol.GLShape = (function() {
             // Remove translational component
             var rotation = orientation.clone();
             rotation.setPosition(new $3Dmol.Vector3());
-            
-            // Define resolution, in steps per turn
-            var phiSteps = 32;
-            var thetaSteps = 32;
-            var phiStep = 2*Math.PI/phiSteps;
-            var thetaStep = 2*Math.PI/thetaSteps;
-            
-            // complete if the range is nearly 2PI
-            var complete = Math.abs(2*Math.PI-endPhi+startPhi) < phiStep/2;
-            
-            var startCap = torusSpec.startcap || torusSpec.startcap === undefined;
-            var endCap =  torusSpec.endcap || torusSpec.startcap === undefined;
+
 
             var vertices = [];
             var normals = [];

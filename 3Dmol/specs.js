@@ -102,7 +102,7 @@
  * Isosurface style specification
  * @typedef IsoSurfaceSpec
  * @prop {number} isoval - specifies the isovalue to draw surface at
- * @propr {boolean} voxel - if true uses voxel style rendering
+ * @prop {boolean} voxel - if true uses voxel style rendering
  * @prop {ColorSpec} color - solid color
  * @prop {number} opacity - transparency, between 0 and 1
  * @prop {boolean} wireframe - draw as wireframe, not surface
@@ -110,6 +110,35 @@
  * @prop {number} smoothness - amount to smooth surface (default 1)
  * @prop {boolean} clickable - if true, user can click on object to trigger callback
  * @prop {function} callback - function to call on click 
+ */
+
+/**
+ * Torus style specification.
+ *
+ * Typical use would set majorradius, minorradius, center, and normal. Other parameters
+ * are optional and allow finer control.
+ * @typedef TorusSpec
+ * @prop {number} majorradius - Major torus radius (measured to the center of the ring)
+ * @prop {number} minorradius - Minor torus radius (thickness of the ring)
+ * @prop {$3Dmol.Vector3} center - Point giving the center of the torus. 
+ * @prop {$3Dmol.Vector3} normal - Vector normal to the plane of the torus.
+ * @prop {$3Dmol.Vector3} startaxis - (Optional) A vector giving the direction of 0
+ *  degrees for the purposes of startangle and endangle. This should not be parallel
+ *  to the normal. Defaults to the X or Y axis, depending on the normal.
+ * @prop {number} startangle - (Optional) For partial toruses, gives the starting angle
+ *  in radians. Default: 1
+ * @prop {number} endangle - (Optional) For partial toruses, gives the ending angle in
+ *  radians. Default: 2*Math.PI (complete torus)
+ * @prop {boolean} startcap - (Optional) For partial toruses, indicates that the start
+ *  should be be closed. Default: true
+ * @prop {boolean} endcap - (Optional) For partial toruses, indicates that the end
+ *  should be be closed. Default: true
+ * @prop {$3Dmol.Matrix4} orientation - (Optional) A transformation matrix. Overridden by
+ *  center/normal.
+ * @prop {number} phisteps - (Optional) Toroidal resolution, specified as the number of
+ *  vertices to generate along a complete ring. Default: 32
+ * @prop {number} thetasteps - (Optional) Poloidal resolution, specified as the number of
+ *  vertices to generate around the ring. Default: 32
  */
 
 /** 
