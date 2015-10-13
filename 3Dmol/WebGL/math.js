@@ -160,7 +160,12 @@ $3Dmol.Vector2.prototype = {
 };
 
 //A 3 Vector
-
+/**
+ * @constructor $3Dmol.Vector3
+ * @param {number} x
+ * @param {number} y
+ * @param {number} z
+ */
 $3Dmol.Vector3 = function(x, y, z) {
     this.x = x || 0.0;
     this.y = y || 0.0;
@@ -171,6 +176,13 @@ $3Dmol.Vector3.prototype =  {
     
     constructor : $3Dmol.Vector3,
     
+    /**
+     * Set the position of this vector
+     * @function $3Dmol.Vector3#set
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
     set : function(x, y, z) {
         
         this.x = x;
@@ -198,6 +210,13 @@ $3Dmol.Vector3.prototype =  {
         return this;
     },
     
+    /**
+     * Add two vectors and store the result in this vector
+     * @function $3Dmol.Vector3#addVectors
+     * @param {$3Dmol.Vector3} a
+     * @param {$3Dmol.Vector3} b
+     * @return {$3Dmol.Vector3} this
+     */
     addVectors : function(a, b) {
         
         this.x = a.x + b.x;
@@ -445,10 +464,13 @@ $3Dmol.Vector3.prototype =  {
 //Matrices
 
 //Matrix3
-/** @constructor */
+/**
+ * Construct a matrix with the specified 9 values, given in row-major order.
+ * @constructor
+ */
 $3Dmol.Matrix3 = function(n11, n12, n13, n21, n22, n23, n31, n32, n33) {
     
-    this.elements = new Float32Array(9);
+    this.elements = new Float32Array(9); // Elements in column-major order
     
     this.set(
         (n11 !== undefined) ? n11 : 1, n12 || 0, n13 || 0,
@@ -462,6 +484,9 @@ $3Dmol.Matrix3.prototype = {
     
     constructor : $3Dmol.Matrix3,    
    
+    /**
+     * Set the matrix elements to the specified 9 values, given in row-major order
+     */
     set : function(n11, n12, n13, n21, n22, n23, n31, n32, n33) {
         var te = this.elements;
         
@@ -563,6 +588,45 @@ $3Dmol.Matrix3.prototype = {
             - m[1] * m[3] * m[8] //-bdi
             - m[0] * m[5] * m[7];//-afh
         return determinant;
+    },
+    
+    /**
+     * Converts this matrix to an orthonormal matrix.
+     *
+     * Runs the Gram-Schmidt process on the columns.
+     */
+    orthonormalize: function() {
+        // Project v onto u
+        var proj = function(u,v) {
+            return u.clone().multiplyScalar(v.dot(u)/u.lengthSq());
+//             var p = u.clone();
+//             var 
+        }
+        // Implement modified Gram-Schmidt process
+        
+        var m = this.elements;
+        
+        // Gather elements
+        var v1 = new $3Dmol.Vector3(m[0],m[1],m[2]);
+        var v2 = new $3Dmol.Vector3(m[3],m[4],m[5]);
+        var v3 = new $3Dmol.Vector3(m[6],m[7],m[8]);
+        
+        // Gram-Schmidt
+        v1.normalize();
+        v2.sub(proj(v1,v2));
+        v3.sub(proj(v1,v3));
+        
+        v2.normalize();
+        v3.sub(proj(v2,v3));
+        
+        v3.normalize();
+
+        // Repack        
+        m[0] = v1.x; m[1] = v1.y; m[2] = v1.z;
+        m[3] = v2.x; m[4] = v2.y; m[5] = v2.z;
+        m[6] = v3.x; m[7] = v3.y; m[8] = v3.z;
+
+        return this;
     },
     
     transpose: function () {
@@ -1013,6 +1077,38 @@ $3Dmol.Matrix4.prototype = {
         var xmax = ymax * aspect;
 
         return this.makeFrustum( xmin, xmax, ymin, ymax, near, far );
+    },
+    
+    /**
+     * Construct an matrix to convert from a different orientation to this one. The
+     * orientation is specified by an origin point, a vector parallel to the old z axis,
+     * and a second vector from the old xz plane. The two vectors should be linearly
+     * independent.
+     * 
+     * @function $3Dmol.Matrix4#makeBasis
+     * @param {$3Dmol.Vector3} origin - cartesian coordinates for P = (0,0,0)
+     * @param {$3Dmol.Vector3} normal - vector parallel to the z axis
+     * @param {$3Dmol.Vector3} axis - vector used to orient the x axis
+     */
+    makeOrientation: function( origin, normal, axis ) {
+        var w = new $3Dmol.Vector3();
+        w.crossVectors(normal,axis);
+        // To keep the normal correct, construct as [Z,X,Y]
+        var m3 = new $3Dmol.Matrix3( normal.x, axis.x, w.x,
+            normal.y,axis.y,w.y,
+            normal.z,axis.z,w.z);
+        
+        m3.orthonormalize();
+        
+        var e4 = this.elements;
+        var e3 = m3.elements;
+        
+        e4[0] = e3[3]; e4[4] = e3[6]; e4[8] = e3[0]; e4[12] = origin.x;
+        e4[1] = e3[4]; e4[5] = e3[7]; e4[9] = e3[1]; e4[13] = origin.y;
+        e4[2] = e3[5]; e4[6] = e3[8]; e4[10] = e3[2]; e4[14] = origin.z;
+        e4[3] = 0; e4[7] = 0; e4[11] = 0; e4[15] = 1;
+        
+        return this;
     },
     
     isEqual : function (m) {

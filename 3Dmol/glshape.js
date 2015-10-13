@@ -937,7 +937,7 @@ $3Dmol.GLShape = (function() {
             var extractOrientation = function(center, normal, axis) {
                 if( !center || !normal)
                     return undefined;
-                normal.normalize();
+
                 // Default axis to X (or Y if normal is X)
                 if( ! axis ) {
                     axis = new $3Dmol.Vector3(1,0,0);
@@ -948,8 +948,8 @@ $3Dmol.GLShape = (function() {
                 
                 //Construct orthonormal basis using the normal and axis
                 var mat = new $3Dmol.Matrix4();
-                mat.setPosition(center);
-                return mat; //TODO stub
+                mat.makeOrientation(center,normal,axis);
+                return mat;
             }
             
             // Extract torus parameters

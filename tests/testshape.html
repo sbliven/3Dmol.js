@@ -85,13 +85,20 @@
 	                        
  	                torus = glviewer.addTorus({center:posLobe.boundingSphere.center,
  	                    majorradius:5, minorradius:.5,
- 	                    startangle:Math.PI*3/2,endangle:Math.PI/2,
+ 	                    startangle:Math.PI/2,endangle:Math.PI*3/2,
 // 	                    startcap:false,endcap:true,
  	                    color:"orange"} );
+
  	                torus = glviewer.addTorus({center:new $3Dmol.Vector3(-5,0,0),
  	                    normal:new $3Dmol.Vector3(0,1,0),
- 	                    majorradius:1, minorradius:.2,color:"red"} );
-	                
+ 	                    startaxis:new $3Dmol.Vector3(1,0,1),
+ 	                    startangle:.1,endangle:Math.PI*2-.1,
+ 	                    majorradius:.75, minorradius:.2,color:"red"} );
+ 	                torus = glviewer.addTorus({center:new $3Dmol.Vector3(-2.5,5*Math.sqrt(3)/2,0),
+ 	                    normal:new $3Dmol.Vector3(Math.sqrt(3),1,0),
+ 	                    startaxis:new $3Dmol.Vector3(1,0,0),
+ 	                    startangle:.1,endangle:Math.PI*2-.1,
+ 	                    majorradius:.75, minorradius:.2,color:"red"} );
 	                glviewer.zoomTo();
 	                glviewer.render();    
                               
